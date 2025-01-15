@@ -1,3 +1,9 @@
+"""ロジスティック回帰による二値分類器の実装。
+
+Usage:
+    python logistic_regression.py
+"""
+
 import sys
 
 import matplotlib.pyplot as plt
