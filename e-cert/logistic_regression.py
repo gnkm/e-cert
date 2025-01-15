@@ -5,9 +5,11 @@ Usage:
 """
 
 import sys
+from typing import List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from imgcat import imgcat
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
@@ -23,7 +25,14 @@ class LogisticRegression:
         training_history (list): 学習過程での損失値の履歴
     """
 
-    def __init__(self, learning_rate=0.01, num_iterations=1000):
+    # クラス変数の型ヒント
+    learning_rate: float
+    num_iterations: int
+    weights: Optional[npt.NDArray[np.float64]]
+    bias: Optional[float]
+    training_history: List[float]
+
+    def __init__(self, learning_rate: float = 0.01, num_iterations: int = 1000) -> None:
         """初期化メソッド
 
         Args:
@@ -36,7 +45,7 @@ class LogisticRegression:
         self.bias = None
         self.training_history = []
 
-    def sigmoid(self, z):
+    def sigmoid(self, z: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """シグモイド関数
 
         Args:
@@ -47,7 +56,9 @@ class LogisticRegression:
         """
         return 1 / (1 + np.exp(-np.clip(z, -30, 30)))  # オーバーフロー対策
 
-    def fit(self, X, y):
+    def fit(
+        self, X: npt.NDArray[np.float64], y: npt.NDArray[np.int64]
+    ) -> "LogisticRegression":
         """モデルの学習を行う
 
         Args:
@@ -86,7 +97,7 @@ class LogisticRegression:
 
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """確率予測を行う
 
         Args:
@@ -98,7 +109,7 @@ class LogisticRegression:
         linear_model = np.dot(X, self.weights) + self.bias
         return self.sigmoid(linear_model)
 
-    def predict(self, X):
+    def predict(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
         """クラス予測を行う
 
         Args:
@@ -110,7 +121,9 @@ class LogisticRegression:
         probas = self.predict_proba(X)
         return (probas > 0.5).astype(int)
 
-    def evaluate(self, X, y_true):
+    def evaluate(
+        self, X: npt.NDArray[np.float64], y_true: npt.NDArray[np.int64]
+    ) -> dict[str, Union[float, npt.NDArray[np.int64], str]]:
         """モデルの評価を行う
 
         Args:
@@ -127,7 +140,7 @@ class LogisticRegression:
             "classification_report": classification_report(y_true, y_pred),
         }
 
-    def plot_training_history(self):
+    def plot_training_history(self) -> None:
         """学習履歴をプロットする"""
         try:
             # グラフの作成と保存
