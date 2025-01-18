@@ -208,7 +208,11 @@ class PolynomialRegression:
 
 @contextmanager
 def plot_manager():
-    """プロットのリソース管理を行うコンテキストマネージャ。"""
+    """プロットのリソース管理を行うコンテキストマネージャ。
+
+    Yields:
+        matplotlib.figure.Figure: 新しく作成された図オブジェクト。
+    """
     fig = plt.figure(figsize=(10, 6))
     try:
         yield fig
@@ -217,14 +221,11 @@ def plot_manager():
 
 
 def setup_japanese_fonts(font_size: int = 12) -> None:
-    """日本語フォントの設定を行う関数
+    """日本語フォントの設定を行う。
 
-    Parameters
-    ----------
-    font_size : int
-        基本フォントサイズ（デフォルト: 12）
+    Args:
+        font_size (int, optional): フォントサイズ。デフォルトは12。
     """
-    # 優先順位付きフォントリスト
     preferred_fonts = [
         "IPAexGothic",  # Linux/macOS向けIPAフォント
         "Noto Sans CJK JP",  # Google Notoフォント
@@ -264,8 +265,12 @@ def setup_japanese_fonts(font_size: int = 12) -> None:
     )
 
 
-def check_imgcat_availability():
-    """imgcatの利用可能性をチェックする。"""
+def check_imgcat_availability() -> bool:
+    """imgcatコマンドの利用可能性をチェックする。
+
+    Returns:
+        bool: imgcatコマンドが利用可能な場合はTrue、それ以外はFalse。
+    """
     try:
         subprocess.run(["which", "imgcat"], check=True, capture_output=True)
         return True
@@ -273,23 +278,23 @@ def check_imgcat_availability():
         return False
 
 
-def display_with_imgcat(fig, fallback_to_file: bool = True):
+def display_with_imgcat(fig, fallback_to_file: bool = True) -> None:
     """matplotlib図をimgcatで表示する。
 
-    Parameters
-    ----------
-    fig : matplotlib.figure.Figure
-        表示する図
-    fallback_to_file : bool
-        imgcat が利用できない場合にファイルに保存するかどうか
+    Args:
+        fig (matplotlib.figure.Figure): 表示する図オブジェクト。
+        fallback_to_file (bool, optional): imgcatが利用できない場合にファイルに
+            保存するかどうか。デフォルトはTrue。
     """
     if not check_imgcat_availability():
         if fallback_to_file:
             filename = "polynomial_regression_plot.png"
             fig.savefig(filename)
-            warnings.warn(f"imgcat is not available. Plot saved to {filename}")
+            warnings.warn(
+                f"imgcatは利用できません。プロットを{filename}に保存しました。"
+            )
         else:
-            warnings.warn("imgcat is not available. No output generated.")
+            warnings.warn("imgcatは利用できません。出力は生成されません。")
         return
 
     buf = io.BytesIO()
@@ -299,7 +304,7 @@ def display_with_imgcat(fig, fallback_to_file: bool = True):
     try:
         subprocess.run(["imgcat"], input=buf.read(), check=True)
     except subprocess.CalledProcessError:
-        warnings.warn("Failed to display image using imgcat")
+        warnings.warn("imgcatによる画像の表示に失敗しました。")
     finally:
         buf.close()
 
