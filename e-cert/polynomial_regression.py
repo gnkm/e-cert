@@ -12,19 +12,33 @@ import numpy as np
 class PolynomialRegression:
     """L2正則化された多項式回帰モデル。
 
-    Parameters
-    ----------
-    degree : int
-        多項式の次数
-    alpha : float
-        L2正則化の強度を制御するパラメータ
+    多項式特徴量を用いて入力データを変換し、L2正則化付きの線形回帰を行います。
+    最適化は正規方程式を解くことで行われます。
+
+    Attributes:
+        degree (int): 多項式の次数。1以上の整数。
+        alpha (float): L2正則化の強度を制御するパラメータ。非負の実数。
+        coefficients (Optional[np.ndarray]): 学習後の多項式係数。
+        bias (Optional[float]): 学習後のバイアス項。
+
+    Note:
+        正則化はバイアス項には適用されません。
     """
 
     def __init__(self, degree: int = 1, alpha: float = 1.0):
+        """イニシャライザ。
+
+        Args:
+            degree (int, optional): 多項式の次数。デフォルトは1。
+            alpha (float, optional): 正則化強度。デフォルトは1.0。
+
+        Raises:
+            ValueError: degreeが1未満の場合、またはalphaが負の場合。
+        """
         if not isinstance(degree, int) or degree < 1:
-            raise ValueError("degree must be a positive integer")
+            raise ValueError("次数は1以上の整数である必要があります。")
         if not isinstance(alpha, (int, float)) or alpha < 0:
-            raise ValueError("alpha must be non-negative")
+            raise ValueError("正則化強度は非負である必要があります。")
 
         self.degree = degree
         self.alpha = alpha
@@ -34,24 +48,42 @@ class PolynomialRegression:
     def _validate_input(
         self, X: np.ndarray, t: Optional[np.ndarray] = None
     ) -> np.ndarray:
-        """入力データを検証し、適切な形状に変換する。"""
+        """入力データを検証し、適切な形状に変換する。
+
+        Args:
+            X (np.ndarray): 入力特徴量配列。
+            t (Optional[np.ndarray], optional): 目標値配列。デフォルトはNone。
+
+        Returns:
+            np.ndarray: 検証・変換後の入力特徴量配列。
+
+        Raises:
+            ValueError: 入力データの形状が不適切な場合。
+        """
         X = np.asarray(X)
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         elif X.ndim != 2:
-            raise ValueError("X must be 1D or 2D array")
+            raise ValueError("Xは1次元または2次元配列である必要があります。")
 
         if t is not None:
             t = np.asarray(t)
             if t.ndim != 1:
-                raise ValueError("t must be 1D array")
+                raise ValueError("tは1次元配列である必要があります。")
             if len(t) != len(X):
-                raise ValueError("Length of X and t must match")
+                raise ValueError("Xとtの長さは一致する必要があります。")
 
         return X
 
     def _create_polynomial_features(self, X: np.ndarray) -> np.ndarray:
-        """多項式特徴量を生成する。"""
+        """多項式特徴量を生成する。
+
+        Args:
+            X (np.ndarray): 入力特徴量配列。
+
+        Returns:
+            np.ndarray: 生成された多項式特徴量。
+        """
         n_samples = len(X)
         X = X.reshape(n_samples, -1)
 
@@ -62,7 +94,18 @@ class PolynomialRegression:
         return np.column_stack(features)
 
     def fit(self, X: np.ndarray, t: np.ndarray) -> "PolynomialRegression":
-        """モデルを学習する。"""
+        """モデルのパラメータを学習する。
+
+        Args:
+            X (np.ndarray): 訓練データの特徴量。形状は(n_samples, n_features)。
+            t (np.ndarray): 訓練データの目標値。形状は(n_samples,)。
+
+        Returns:
+            PolynomialRegression: 学習済みのモデル。
+
+        Raises:
+            ValueError: 正規方程式が解けない場合。
+        """
         X = self._validate_input(X, t)
         phi = self._create_polynomial_features(X)
 
@@ -76,7 +119,7 @@ class PolynomialRegression:
             w = np.linalg.solve(A, b)
         except np.linalg.LinAlgError:
             raise ValueError(
-                "Failed to solve the normal equation. Try increasing alpha."
+                "正規方程式が解けませんでした。alphaの値を大きくしてみてください。"
             )
 
         self.bias = w[0]
@@ -85,9 +128,19 @@ class PolynomialRegression:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        """新しいデータに対して予測を行う。"""
+        """新しいデータに対して予測を行う。
+
+        Args:
+            X (np.ndarray): 予測する特徴量。形状は(n_samples, n_features)。
+
+        Returns:
+            np.ndarray: 予測値。形状は(n_samples,)。
+
+        Raises:
+            ValueError: モデルが未学習の場合。
+        """
         if self.coefficients is None or self.bias is None:
-            raise ValueError("Model has not been fitted. Call fit() first.")
+            raise ValueError("モデルが未学習です。先にfit()を実行してください。")
 
         X = self._validate_input(X)
         phi = self._create_polynomial_features(X)
@@ -104,26 +157,22 @@ class PolynomialRegression:
         - y_i: 予測値
         - t_mean: 実測値の平均
 
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            評価データ
-        t : array-like of shape (n_samples,)
-            目標値（実測値）
+        Args:
+            X (np.ndarray): 評価データ。形状は(n_samples, n_features)。
+            t (np.ndarray): 実測値。形状は(n_samples,)。
 
-        Returns
-        -------
-        float
-            決定係数（R²スコア）
-            - 1.0: 完全な予測（最良）
-            - 0.0: 定数モデル（平均値による予測）と同等
-            - 負値: 平均値による予測よりも悪い予測
+        Returns:
+            float: 決定係数。以下の範囲の値をとります：
+                - 1.0: 完全な予測（最良）
+                - 0.0: 定数モデル（平均値による予測）と同等
+                - 負値: 平均値による予測よりも悪い予測
 
-        Raises
-        ------
-        ValueError
-            - モデルが未学習の場合
-            - 入力データの形状が不適切な場合
+        Raises:
+            ValueError: モデルが未学習の場合、または入力データの形状が不適切な場合。
+
+        Warns:
+            UserWarning: すべての実測値が同じ値の場合。この場合、決定係数の定義が
+                        不適切となるため、完全な予測の場合は1.0、それ以外は0.0を返します。
         """
         if self.coefficients is None or self.bias is None:
             raise ValueError("モデルが未学習です。先にfit()を実行してください。")
