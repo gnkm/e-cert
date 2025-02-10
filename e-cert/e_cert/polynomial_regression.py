@@ -37,16 +37,60 @@ class PolynomialRegression(BaseRegressor):
         return X_poly
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
-        """正規方程式を用いてパラメータthetaを求める。
-        $$\\theta = (X^T X)^{-1} X^T y$$
+        """勾配降下法を用いてパラメータthetaを求める。
+
+        コスト関数（二乗誤差）:
+        $$J(\\theta) = \\frac{1}{2m}\\sum_{i=1}^{m}(h_\\theta(x^{(i)}) - y^{(i)})^2$$
+
+        勾配:
+        $$\\frac{\\partial J}{\\partial \\theta} = \\frac{1}{m}X^T(X\\theta - y)$$
 
         Args:
             X: 入力データ(形状: (サンプル数, ))
             y: ターゲットデータ(形状: (サンプル数, ))
         """
+        # ハイパーパラメータ
+        self.learning_rate = 0.01  # 学習率
+        self.max_iter = 1000  # 最大イテレーション回数
+        self.tol = 1e-6  # 収束判定の閾値
+
+        # 多項式特徴量の計算
         X_poly = self._polynomial_features(X)
-        # 正規方程式(単純実装)
-        self.theta = np.linalg.inv(X_poly.T @ X_poly) @ (X_poly.T @ y)
+        m = X_poly.shape[0]  # サンプル数
+
+        # パラメータの初期化
+        self.theta = np.zeros(self.degree + 1, dtype=np.float64)
+
+        # コスト履歴（学習過程の確認用）
+        self.costs: list[float] = []
+
+        # 勾配降下法
+        for i in range(self.max_iter):
+            # 予測値の計算
+            y_pred = X_poly @ self.theta
+
+            # 誤差の計算
+            error = y_pred - y
+
+            # コスト（二乗誤差）の計算
+            cost = np.sum(error**2) / (2 * m)
+            self.costs.append(float(cost))
+
+            # 勾配の計算
+            gradient = (X_poly.T @ error) / m
+
+            # パラメータの更新
+            theta_prev = self.theta.copy()
+            self.theta -= self.learning_rate * gradient
+
+            # 収束判定
+            # 1. パラメータの変化が小さい場合
+            if np.all(np.abs(self.theta - theta_prev) < self.tol):
+                break
+
+            # 2. コストの変化が小さい場合（イテレーション2回目以降）
+            if i > 0 and abs(self.costs[-1] - self.costs[-2]) < self.tol:
+                break
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """学習結果を用いて予測値を計算する。
